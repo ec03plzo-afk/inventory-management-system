@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supplier Management - Inventory System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f6f9; }
+
+        .sidebar { width: 220px; background-color: #f3c344; padding: 20px 0; display: flex; flex-direction: column; }
+        .sidebar-brand { font-size: 20px; font-weight: bold; color: #ffffff; padding: 0 20px 30px 20px; text-transform: uppercase; }
+        .sidebar-menu { list-style: none; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: rgba(255, 255, 255, 0.25); }
+        .sidebar-menu li a i { width: 25px; margin-right: 10px; }
+
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .top-header { height: 60px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
+
+        .content-body { padding: 30px; }
+        input { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; font-weight: bold; color: white; }
+        .btn-green { background-color: #28a745; }
+        .btn-red { background-color: #dc3545; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        th, td { border-bottom: 1px solid #eee; padding: 12px 16px; text-align: left; }
+        th { background-color: #f8f9fa; }
+
+        .form-card { background: white; padding: 20px; border-radius: 8px; margin-top: 30px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-brand">INVENTORY SYSTEM</div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="fa-solid fa-th-large"></i> Dashboard</a></li>
+            <li><a href="/products"><i class="fa-solid fa-box"></i> Product</a></li>
+            <li><a href="/customers"><i class="fa-solid fa-users"></i> Customer</a></li>
+            <li><a href="/categories"><i class="fa-solid fa-layer-group"></i> Category</a></li>
+            <li><a href="/suppliers" class="active"><i class="fa-solid fa-truck"></i> Supplier</a></li>
+            <li><a href="/section/Purchase"><i class="fa-solid fa-shopping-bag"></i> Purchase</a></li>
+            <li><a href="/section/Orders"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+            <li><a href="/section/User Registration"><i class="fa-solid fa-id-card"></i> User Registration</a></li>
+        </ul>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="top-header">
+            <div><i class="fa-solid fa-bars"></i> <strong>Supplier Management</strong></div>
+            <div><i class="fa-solid fa-circle-user"></i> {{ session['username'] }} <a href="/logout" style="color: red; margin-left: 10px;">[Logout]</a></div>
+        </div>
+
+        <div class="content-body">
+            <table>
+                <tr>
+                    <th>ID</th>
+                    <th>Supplier Name</th>
+                    <th>Contact Person</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Actions</th>
+                </tr>
+                {% for row in suppliers %}
+                <tr>
+                    <td>{{ row['id'] }}</td>
+                    <td><strong>{{ row['name'] }}</strong></td>
+                    <td>{{ row['contact_person'] if row['contact_person'] else 'N/A' }}</td>
+                    <td>{{ row['email'] if row['email'] else 'N/A' }}</td>
+                    <td>{{ row['phone'] if row['phone'] else 'N/A' }}</td>
+                    <td>{{ row['address'] if row['address'] else 'N/A' }}</td>
+                    <td>
+                        <form action="/suppliers/delete/{{ row['id'] }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-red" style="padding: 4px 8px; font-size: 12px;" onclick="return confirm('Delete supplier?')">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+
+            <div class="form-card">
+                <h3>Add New Supplier</h3>
+                <form action="/suppliers/add" method="POST" style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="text" name="name" placeholder="Supplier Company Name" required style="flex: 1;">
+                    <input type="text" name="contact_person" placeholder="Contact Person Name" style="flex: 1;">
+                    <input type="email" name="email" placeholder="Email Address" style="flex: 1;">
+                    <input type="text" name="phone" placeholder="Phone Number" style="flex: 1;">
+                    <input type="text" name="address" placeholder="Address" style="flex: 2;">
+                    <button type="submit" class="btn btn-green">Add Supplier</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

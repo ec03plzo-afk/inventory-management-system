@@ -26,6 +26,16 @@ def init_db():
     if db_type == 'pg':
         cur = conn.cursor()
         cur.execute('''
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                contact_person VARCHAR(255),
+                email VARCHAR(255),
+                phone VARCHAR(50),
+                address TEXT
+            );
+        ''')
+        cur.execute('''
             CREATE TABLE IF NOT EXISTS customers (
                 id SERIAL PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -62,6 +72,16 @@ def init_db():
         conn.commit()
         cur.close()
     else:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                contact_person TEXT,
+                email TEXT,
+                phone TEXT,
+                address TEXT
+            )
+        ''')
         conn.execute('''
             CREATE TABLE IF NOT EXISTS customers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -147,23 +167,89 @@ def dashboard():
         categories_list = cur.fetchall()
         cur.execute("SELECT * FROM customers ORDER BY id;")
         customers_list = cur.fetchall()
+        cur.execute("SELECT * FROM suppliers ORDER BY id;")
+        suppliers_list = cur.fetchall()
         cur.close()
     else:
         inventory = conn.execute('SELECT * FROM inventory').fetchall()
         categories_list = conn.execute('SELECT * FROM categories').fetchall()
         customers_list = conn.execute('SELECT * FROM customers').fetchall()
+        suppliers_list = conn.execute('SELECT * FROM suppliers').fetchall()
         
     total_products = len(inventory)
     total_categories = len(categories_list)
     total_customers = len(customers_list)
+    total_suppliers = len(suppliers_list)
     conn.close()
     
     return render_template(
         'dashboard.html', 
         total_products=total_products, 
         total_categories=total_categories,
-        total_customers=total_customers
+        total_customers=total_customers,
+        total_suppliers=total_suppliers
     )
+
+# --- SUPPLIER MODULE ---
+@app.route('/suppliers')
+def suppliers():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM suppliers ORDER BY id DESC;")
+        suppliers_list = cur.fetchall()
+        cur.close()
+    else:
+        suppliers_list = conn.execute('SELECT * FROM suppliers ORDER BY id DESC').fetchall()
+    conn.close()
+    
+    return render_template('suppliers.html', suppliers=suppliers_list)
+
+@app.route('/suppliers/add', methods=['POST'])
+def add_supplier():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    name = request.form.get('name')
+    contact_person = request.form.get('contact_person', '')
+    email = request.form.get('email', '')
+    phone = request.form.get('phone', '')
+    address = request.form.get('address', '')
+    
+    if name:
+        conn, db_type = get_db_connection()
+        if db_type == 'pg':
+            cur = conn.cursor()
+            cur.execute("INSERT INTO suppliers (name, contact_person, email, phone, address) VALUES (%s, %s, %s, %s, %s);", (name, contact_person, email, phone, address))
+            conn.commit()
+            cur.close()
+        else:
+            conn.execute('INSERT INTO suppliers (name, contact_person, email, phone, address) VALUES (?, ?, ?, ?, ?)', (name, contact_person, email, phone, address))
+            conn.commit()
+        conn.close()
+        
+    return redirect(url_for('suppliers'))
+
+@app.route('/suppliers/delete/<int:id>', methods=['POST'])
+def delete_supplier(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        cur = conn.cursor()
+        cur.execute("DELETE FROM suppliers WHERE id = %s;", (id,))
+        conn.commit()
+        cur.close()
+    else:
+        conn.execute('DELETE FROM suppliers WHERE id = ?', (id,))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('suppliers'))
 
 # --- CUSTOMER MODULE ---
 @app.route('/customers')
