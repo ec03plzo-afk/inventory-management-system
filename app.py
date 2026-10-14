@@ -13,7 +13,6 @@ def get_db_connection():
     if DATABASE_URL:
         import psycopg2
         import psycopg2.extras
-        # Replace postgres:// with postgresql:// if needed for SQLAlchemy/psycopg2 compatibility
         url = DATABASE_URL.replace('postgres://', 'postgresql://')
         conn = psycopg2.connect(url)
         return conn, 'pg'
@@ -124,9 +123,19 @@ def index():
             inventory = conn.execute('SELECT * FROM inventory').fetchall()
             
     low_stock_items = [item for item in inventory if item['quantity'] <= 5]
+    total_items = len(inventory)
+    total_quantity = sum(item['quantity'] for item in inventory)
+    
     conn.close()
     
-    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
+    return render_template(
+        'index.html', 
+        inventory=inventory, 
+        low_stock_items=low_stock_items, 
+        search_query=search_query,
+        total_items=total_items,
+        total_quantity=total_quantity
+    )
 
 @app.route('/add', methods=['POST'])
 def add_item():
