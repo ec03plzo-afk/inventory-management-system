@@ -99,6 +99,7 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
+# Tab 1: Inventory List Page
 @app.route('/')
 def index():
     if not session.get('logged_in'):
@@ -123,18 +124,38 @@ def index():
             inventory = conn.execute('SELECT * FROM inventory').fetchall()
             
     low_stock_items = [item for item in inventory if item['quantity'] <= 5]
+    conn.close()
+    
+    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
+
+# Tab 2: Dashboard Analytics Page
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM inventory ORDER BY id;")
+        inventory = cur.fetchall()
+        cur.close()
+    else:
+        inventory = conn.execute('SELECT * FROM inventory').fetchall()
+        
     total_items = len(inventory)
     total_quantity = sum(item['quantity'] for item in inventory)
+    low_stock_items = [item for item in inventory if item['quantity'] <= 5]
     
     conn.close()
     
     return render_template(
-        'index.html', 
-        inventory=inventory, 
-        low_stock_items=low_stock_items, 
-        search_query=search_query,
-        total_items=total_items,
-        total_quantity=total_quantity
+        'dashboard.html', 
+        total_items=total_items, 
+        total_quantity=total_quantity, 
+        low_stock_items=low_stock_items
     )
 
 @app.route('/add', methods=['POST'])
