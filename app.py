@@ -202,39 +202,31 @@ def dashboard():
         
     conn, db_type = get_db_connection()
     if db_type == 'pg':
-        import psycopg2.extras
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute("SELECT * FROM inventory ORDER BY id;")
-        inventory = cur.fetchall()
-        cur.execute("SELECT * FROM categories ORDER BY id;")
-        categories_list = cur.fetchall()
-        cur.execute("SELECT * FROM customers ORDER BY id;")
-        customers_list = cur.fetchall()
-        cur.execute("SELECT * FROM suppliers ORDER BY id;")
-        suppliers_list = cur.fetchall()
-        cur.execute("SELECT * FROM orders ORDER BY id;")
-        orders_list = cur.fetchall()
-        cur.execute("SELECT * FROM purchases ORDER BY id;")
-        purchases_list = cur.fetchall()
-        cur.execute("SELECT * FROM users ORDER BY id;")
-        users_list = cur.fetchall()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM inventory;")
+        total_products = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM categories;")
+        total_categories = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM customers;")
+        total_customers = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM suppliers;")
+        total_suppliers = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM orders;")
+        total_orders = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM purchases;")
+        total_purchases = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM users;")
+        total_users = cur.fetchone()[0]
         cur.close()
     else:
-        inventory = conn.execute('SELECT * FROM inventory').fetchall()
-        categories_list = conn.execute('SELECT * FROM categories').fetchall()
-        customers_list = conn.execute('SELECT * FROM customers').fetchall()
-        suppliers_list = conn.execute('SELECT * FROM suppliers').fetchall()
-        orders_list = conn.execute('SELECT * FROM orders').fetchall()
-        purchases_list = conn.execute('SELECT * FROM purchases').fetchall()
-        users_list = conn.execute('SELECT * FROM users').fetchall()
+        total_products = conn.execute("SELECT COUNT(*) FROM inventory;").fetchone()[0]
+        total_categories = conn.execute("SELECT COUNT(*) FROM categories;").fetchone()[0]
+        total_customers = conn.execute("SELECT COUNT(*) FROM customers;").fetchone()[0]
+        total_suppliers = conn.execute("SELECT COUNT(*) FROM suppliers;").fetchone()[0]
+        total_orders = conn.execute("SELECT COUNT(*) FROM orders;").fetchone()[0]
+        total_purchases = conn.execute("SELECT COUNT(*) FROM purchases;").fetchone()[0]
+        total_users = conn.execute("SELECT COUNT(*) FROM users;").fetchone()[0]
         
-    total_products = len(inventory)
-    total_categories = len(categories_list)
-    total_customers = len(customers_list)
-    total_suppliers = len(suppliers_list)
-    total_orders = len(orders_list)
-    total_purchases = len(purchases_list)
-    total_users = len(users_list)
     conn.close()
     
     return render_template(
