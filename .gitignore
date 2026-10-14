@@ -1,2 +1,6 @@
 inventory.db
 inventory_export.csv
+venv/
+__pycache__
+*.db
+.env
