@@ -84,12 +84,13 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
                 username VARCHAR(255) UNIQUE NOT NULL,
-                password VARCHAR(255) NOT NULL
+                password VARCHAR(255) NOT NULL,
+                role VARCHAR(50) DEFAULT 'Staff'
             );
         ''')
         cur.execute("SELECT * FROM users WHERE username = %s;", ('admin@gmail.com',))
         if not cur.fetchone():
-            cur.execute("INSERT INTO users (username, password) VALUES (%s, %s);", ('admin@gmail.com', 'password123'))
+            cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s);", ('admin@gmail.com', 'password123', 'Admin'))
         conn.commit()
         cur.close()
     else:
@@ -151,12 +152,13 @@ def init_db():
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
-                password TEXT NOT NULL
+                password TEXT NOT NULL,
+                role TEXT DEFAULT 'Staff'
             )
         ''')
         user = conn.execute('SELECT * FROM users WHERE username = ?', ('admin@gmail.com',)).fetchone()
         if not user:
-            conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', ('admin@gmail.com', 'password123'))
+            conn.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('admin@gmail.com', 'password123', 'Admin'))
         conn.commit()
     conn.close()
 
@@ -214,6 +216,8 @@ def dashboard():
         orders_list = cur.fetchall()
         cur.execute("SELECT * FROM purchases ORDER BY id;")
         purchases_list = cur.fetchall()
+        cur.execute("SELECT * FROM users ORDER BY id;")
+        users_list = cur.fetchall()
         cur.close()
     else:
         inventory = conn.execute('SELECT * FROM inventory').fetchall()
@@ -222,6 +226,7 @@ def dashboard():
         suppliers_list = conn.execute('SELECT * FROM suppliers').fetchall()
         orders_list = conn.execute('SELECT * FROM orders').fetchall()
         purchases_list = conn.execute('SELECT * FROM purchases').fetchall()
+        users_list = conn.execute('SELECT * FROM users').fetchall()
         
     total_products = len(inventory)
     total_categories = len(categories_list)
@@ -229,6 +234,7 @@ def dashboard():
     total_suppliers = len(suppliers_list)
     total_orders = len(orders_list)
     total_purchases = len(purchases_list)
+    total_users = len(users_list)
     conn.close()
     
     return render_template(
@@ -238,8 +244,71 @@ def dashboard():
         total_customers=total_customers,
         total_suppliers=total_suppliers,
         total_orders=total_orders,
-        total_purchases=total_purchases
+        total_purchases=total_purchases,
+        total_users=total_users
     )
+
+# --- USER REGISTRATION MODULE ---
+@app.route('/users')
+def users():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM users ORDER BY id DESC;")
+        users_list = cur.fetchall()
+        cur.close()
+    else:
+        users_list = conn.execute('SELECT * FROM users ORDER BY id DESC').fetchall()
+    conn.close()
+    
+    return render_template('users.html', users=users_list)
+
+@app.route('/users/add', methods=['POST'])
+def add_user():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'Staff')
+    
+    if username and password:
+        conn, db_type = get_db_connection()
+        try:
+            if db_type == 'pg':
+                cur = conn.cursor()
+                cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s);", (username, password, role))
+                conn.commit()
+                cur.close()
+            else:
+                conn.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', (username, password, role))
+                conn.commit()
+        except Exception as e:
+            flash("Username already exists!")
+        conn.close()
+        
+    return redirect(url_for('users'))
+
+@app.route('/users/delete/<int:id>', methods=['POST'])
+def delete_user(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        cur = conn.cursor()
+        cur.execute("DELETE FROM users WHERE id = %s;", (id,))
+        conn.commit()
+        cur.close()
+    else:
+        conn.execute('DELETE FROM users WHERE id = ?', (id,))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('users'))
 
 # --- PURCHASE MODULE ---
 @app.route('/purchases')
@@ -694,12 +763,6 @@ def delete_item(id):
         conn.commit()
     conn.close()
     return redirect(url_for('products'))
-
-@app.route('/section/<title>')
-def view_section(title):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    return render_template('section.html', title=title)
 
 @app.route('/export/csv')
 def export_csv():
