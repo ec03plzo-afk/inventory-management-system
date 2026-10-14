@@ -6,9 +6,19 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background-color: #fafafa; }
         .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        
+        /* Low Stock Alert Box */
+        .alert-box { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; padding: 15px; border-radius: 6px; margin-top: 20px; }
+        
+        /* Badges */
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .badge-danger { background-color: #dc3545; color: white; }
+        .badge-success { background-color: #28a745; color: white; }
+
         table { border-collapse: collapse; width: 100%; margin-top: 20px; background: white; }
         th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
         th { background-color: #f2f2f2; }
+        
         form { margin-top: 20px; }
         input { padding: 8px; margin-right: 10px; }
         .btn-add { padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -27,11 +37,24 @@
         </div>
     </div>
 
+    <!-- Low Stock Warning Banner -->
+    {% if low_stock_items %}
+    <div class="alert-box">
+        <strong>⚠️ Low Stock Warning!</strong> The following items are low in stock (5 or fewer items remaining):
+        <ul>
+            {% for item in low_stock_items %}
+            <li><strong>{{ item['item'] }}</strong> - Only {{ item['quantity'] }} left!</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
     <table>
         <tr>
             <th>ID</th>
             <th>Item Name</th>
             <th>Quantity</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
         {% for row in inventory %}
@@ -39,6 +62,13 @@
             <td>{{ row['id'] }}</td>
             <td>{{ row['item'] }}</td>
             <td>{{ row['quantity'] }}</td>
+            <td>
+                {% if row['quantity'] <= 5 %}
+                    <span class="badge badge-danger">LOW STOCK</span>
+                {% else %}
+                    <span class="badge badge-success">IN STOCK</span>
+                {% endif %}
+            </td>
             <td>
                 <div class="actions">
                     <a href="/edit/{{ row['id'] }}" class="btn-edit">Edit</a>

@@ -64,8 +64,12 @@ def index():
         
     conn = get_db_connection()
     inventory = conn.execute('SELECT * FROM inventory').fetchall()
+    
+    # Pangitaon ang tanang items nga ubos sa 5 ang quantity
+    low_stock_items = [item for item in inventory if item['quantity'] <= 5]
     conn.close()
-    return render_template('index.html', inventory=inventory)
+    
+    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items)
 
 @app.route('/add', methods=['POST'])
 def add_item():
