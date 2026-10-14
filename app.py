@@ -1,5 +1,7 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, Response
 import sqlite3
+import csv
+import io
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -15,7 +17,8 @@ def init_db():
         CREATE TABLE IF NOT EXISTS inventory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             item TEXT NOT NULL,
-            quantity INTEGER NOT NULL
+            quantity INTEGER NOT NULL,
+            category TEXT DEFAULT 'General'
         )
     ''')
     conn.execute('''
@@ -62,14 +65,21 @@ def index():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
         
+    search_query = request.args.get('search', '')
     conn = get_db_connection()
-    inventory = conn.execute('SELECT * FROM inventory').fetchall()
     
-    # Pangitaon ang tanang items nga ubos sa 5 ang quantity
+    if search_query:
+        inventory = conn.execute(
+            'SELECT * FROM inventory WHERE item LIKE ? OR category LIKE ?', 
+            (f'%{search_query}%', f'%{search_query}%')
+        ).fetchall()
+    else:
+        inventory = conn.execute('SELECT * FROM inventory').fetchall()
+        
     low_stock_items = [item for item in inventory if item['quantity'] <= 5]
     conn.close()
     
-    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items)
+    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
 
 @app.route('/add', methods=['POST'])
 def add_item():
@@ -78,10 +88,11 @@ def add_item():
         
     item_name = request.form.get('item')
     qty = request.form.get('quantity')
+    category = request.form.get('category', 'General')
     
     if item_name and qty:
         conn = get_db_connection()
-        conn.execute('INSERT INTO inventory (item, quantity) VALUES (?, ?)', (item_name, int(qty)))
+        conn.execute('INSERT INTO inventory (item, quantity, category) VALUES (?, ?, ?)', (item_name, int(qty), category))
         conn.commit()
         conn.close()
         
@@ -97,8 +108,9 @@ def edit_item(id):
     if request.method == 'POST':
         item_name = request.form.get('item')
         qty = request.form.get('quantity')
+        category = request.form.get('category', 'General')
         
-        conn.execute('UPDATE inventory SET item = ?, quantity = ? WHERE id = ?', (item_name, int(qty), id))
+        conn.execute('UPDATE inventory SET item = ?, quantity = ?, category = ? WHERE id = ?', (item_name, int(qty), category, id))
         conn.commit()
         conn.close()
         return redirect(url_for('index'))
@@ -117,6 +129,29 @@ def delete_item(id):
     conn.commit()
     conn.close()
     return redirect(url_for('index'))
+
+@app.route('/export/csv')
+def export_csv():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    inventory = conn.execute('SELECT id, item, category, quantity FROM inventory').fetchall()
+    conn.close()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['ID', 'Item Name', 'Category', 'Quantity'])
+    
+    for row in inventory:
+        writer.writerow([row['id'], row['item'], row['category'], row['quantity']])
+        
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': 'attachment; filename=inventory_report.csv'}
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
