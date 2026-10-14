@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - Inventory System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #f4f6f9; }
+
+        .sidebar { width: 220px; background-color: #f3c344; padding: 20px 0; display: flex; flex-direction: column; }
+        .sidebar-brand { font-size: 20px; font-weight: bold; color: #ffffff; padding: 0 20px 30px 20px; text-transform: uppercase; }
+        .sidebar-menu { list-style: none; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: rgba(255, 255, 255, 0.25); }
+        .sidebar-menu li a i { width: 25px; margin-right: 10px; }
+
+        .main-wrapper { flex: 1; display: flex; flex-direction: column; }
+        .top-header { height: 60px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
+        .content-body { padding: 30px; }
+        .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); text-align: center; color: #555; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="sidebar-brand">INVENTORY SYSTEM</div>
+        <ul class="sidebar-menu">
+            <li><a href="/dashboard"><i class="fa-solid fa-th-large"></i> Dashboard</a></li>
+            <li><a href="/products"><i class="fa-solid fa-box"></i> Product</a></li>
+            <li><a href="/section/Customer" class="{% if title == 'Customer' %}active{% endif %}"><i class="fa-solid fa-users"></i> Customer</a></li>
+            <li><a href="/section/Category" class="{% if title == 'Category' %}active{% endif %}"><i class="fa-solid fa-layer-group"></i> Category</a></li>
+            <li><a href="/section/Supplier" class="{% if title == 'Supplier' %}active{% endif %}"><i class="fa-solid fa-truck"></i> Supplier</a></li>
+            <li><a href="/section/Purchase" class="{% if title == 'Purchase' %}active{% endif %}"><i class="fa-solid fa-shopping-bag"></i> Purchase</a></li>
+            <li><a href="/section/Orders" class="{% if title == 'Orders' %}active{% endif %}"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+            <li><a href="/section/User Registration" class="{% if title == 'User Registration' %}active{% endif %}"><i class="fa-solid fa-id-card"></i> User Registration</a></li>
+        </ul>
+    </div>
+
+    <div class="main-wrapper">
+        <div class="top-header">
+            <div><i class="fa-solid fa-bars"></i> <strong>{{ title }} Management</strong></div>
+            <div><i class="fa-solid fa-circle-user"></i> {{ session['username'] }} <a href="/logout" style="color: red; margin-left: 10px;">[Logout]</a></div>
+        </div>
+
+        <div class="content-body">
+            <div class="card">
+                <h2>{{ title }} Module</h2>
+                <p style="margin-top: 10px;">This section is currently under active setup. Items and records for {{ title }} will display here.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

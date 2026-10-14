@@ -117,7 +117,6 @@ def dashboard():
         
     total_products = len(inventory)
     total_categories = len(set(item['category'] for item in inventory)) if inventory else 0
-    
     conn.close()
     
     return render_template('dashboard.html', total_products=total_products, total_categories=total_categories)
@@ -149,6 +148,13 @@ def products():
     conn.close()
     
     return render_template('products.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
+
+# Generic Section Route for Customer, Category, Supplier, Purchase, Orders, User Registration
+@app.route('/section/<title>')
+def view_section(title):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    return render_template('section.html', title=title)
 
 @app.route('/add', methods=['POST'])
 def add_item():

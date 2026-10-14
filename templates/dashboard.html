@@ -3,34 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <title>Dashboard - Inventory Management System</title>
-    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { display: flex; height: 100vh; background-color: #f4f6f9; }
 
-        /* Yellow Sidebar */
         .sidebar { width: 220px; background-color: #f3c344; padding: 20px 0; display: flex; flex-direction: column; }
-        .sidebar-brand { font-size: 20px; font-weight: bold; color: #ffffff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); padding: 0 20px 30px 20px; text-transform: uppercase; letter-spacing: 1px; }
+        .sidebar-brand { font-size: 20px; font-weight: bold; color: #ffffff; padding: 0 20px 30px 20px; text-transform: uppercase; }
         .sidebar-menu { list-style: none; }
-        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; transition: 0.2s; }
-        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: rgba(255, 255, 255, 0.25); color: #ffffff; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 12px 20px; color: #ffffff; text-decoration: none; font-weight: 600; font-size: 14px; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background-color: rgba(255, 255, 255, 0.25); }
         .sidebar-menu li a i { width: 25px; margin-right: 10px; }
 
-        /* Main Content Area */
         .main-wrapper { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-
-        /* Top Header */
         .top-header { height: 60px; background: white; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; }
         .clock-display { font-size: 14px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px; }
         .user-profile { font-size: 14px; font-weight: bold; color: #333; display: flex; align-items: center; gap: 10px; }
-        .user-profile a { color: #dc3545; text-decoration: none; font-size: 12px; font-weight: normal; margin-left: 10px; }
+        .user-profile a { color: #dc3545; text-decoration: none; font-size: 12px; margin-left: 10px; }
 
-        /* Cards Grid */
         .content-body { padding: 30px; }
         .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
         
-        .card-item { background: white; border-radius: 8px; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; overflow: hidden; }
+        .card-item { background: white; border-radius: 8px; padding: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; overflow: hidden; text-decoration: none; color: inherit; }
         .card-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
         
         .card-red::before { background-color: #dc3545; }
@@ -45,24 +39,21 @@
 </head>
 <body>
 
-    <!-- Left Yellow Sidebar -->
     <div class="sidebar">
         <div class="sidebar-brand">INVENTORY SYSTEM</div>
         <ul class="sidebar-menu">
             <li><a href="/dashboard" class="active"><i class="fa-solid fa-th-large"></i> Dashboard</a></li>
             <li><a href="/products"><i class="fa-solid fa-box"></i> Product</a></li>
-            <li><a href="#"><i class="fa-solid fa-users"></i> Customer</a></li>
-            <li><a href="#"><i class="fa-solid fa-layer-group"></i> Category</a></li>
-            <li><a href="#"><i class="fa-solid fa-truck"></i> Supplier</a></li>
-            <li><a href="#"><i class="fa-solid fa-shopping-bag"></i> Purchase</a></li>
-            <li><a href="#"><i class="fa-solid fa-receipt"></i> Orders</a></li>
-            <li><a href="#"><i class="fa-solid fa-id-card"></i> User Registration</a></li>
+            <li><a href="/section/Customer"><i class="fa-solid fa-users"></i> Customer</a></li>
+            <li><a href="/section/Category"><i class="fa-solid fa-layer-group"></i> Category</a></li>
+            <li><a href="/section/Supplier"><i class="fa-solid fa-truck"></i> Supplier</a></li>
+            <li><a href="/section/Purchase"><i class="fa-solid fa-shopping-bag"></i> Purchase</a></li>
+            <li><a href="/section/Orders"><i class="fa-solid fa-receipt"></i> Orders</a></li>
+            <li><a href="/section/User Registration"><i class="fa-solid fa-id-card"></i> User Registration</a></li>
         </ul>
     </div>
 
-    <!-- Right Main Wrapper -->
     <div class="main-wrapper">
-        <!-- Top Header Bar -->
         <div class="top-header">
             <div class="clock-display">
                 <i class="fa-solid fa-bars"></i>
@@ -75,64 +66,63 @@
             </div>
         </div>
 
-        <!-- Dashboard Cards Body -->
         <div class="content-body">
             <div class="cards-grid">
-                <div class="card-item card-red">
+                <a href="/section/Customer" class="card-item card-red">
                     <div class="card-info">
                         <h4>Customers</h4>
                         <p>1</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-user" style="color: #dc3545;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-blue">
+                <a href="/products" class="card-item card-blue">
                     <div class="card-info">
                         <h4>Product</h4>
                         <p>{{ total_products }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-cube" style="color: #17a2b8;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-yellow">
+                <a href="/section/Purchase" class="card-item card-yellow">
                     <div class="card-info">
                         <h4>Purchase</h4>
                         <p>1</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-bag-shopping" style="color: #ffc107;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-green">
+                <a href="/section/Orders" class="card-item card-green">
                     <div class="card-info">
                         <h4>Orders</h4>
                         <p>2</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-newspaper" style="color: #28a745;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-green">
+                <a href="/section/Category" class="card-item card-green">
                     <div class="card-info">
                         <h4>Category</h4>
                         <p>{{ total_categories }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-grip" style="color: #28a745;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-yellow">
+                <a href="/section/Supplier" class="card-item card-yellow">
                     <div class="card-info">
                         <h4>Suppliers</h4>
                         <p>1</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-truck" style="color: #ffc107;"></i></div>
-                </div>
+                </a>
 
-                <div class="card-item card-blue">
+                <a href="/section/User Registration" class="card-item card-blue">
                     <div class="card-info">
                         <h4>User Registration</h4>
                         <p>1</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-address-card" style="color: #17a2b8;"></i></div>
-                </div>
+                </a>
 
                 <div class="card-item card-red">
                     <div class="card-info">
@@ -145,7 +135,6 @@
         </div>
     </div>
 
-    <!-- Live Clock Script -->
     <script>
         function updateClock() {
             const now = new Date();
