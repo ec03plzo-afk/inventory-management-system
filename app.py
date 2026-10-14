@@ -26,6 +26,13 @@ def init_db():
     if db_type == 'pg':
         cur = conn.cursor()
         cur.execute('''
+            CREATE TABLE IF NOT EXISTS categories (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) UNIQUE NOT NULL,
+                description TEXT
+            );
+        ''')
+        cur.execute('''
             CREATE TABLE IF NOT EXISTS inventory (
                 id SERIAL PRIMARY KEY,
                 item VARCHAR(255) NOT NULL,
@@ -46,6 +53,13 @@ def init_db():
         conn.commit()
         cur.close()
     else:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT
+            )
+        ''')
         conn.execute('''
             CREATE TABLE IF NOT EXISTS inventory (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,16 +125,78 @@ def dashboard():
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         cur.execute("SELECT * FROM inventory ORDER BY id;")
         inventory = cur.fetchall()
+        cur.execute("SELECT * FROM categories ORDER BY id;")
+        categories_list = cur.fetchall()
         cur.close()
     else:
         inventory = conn.execute('SELECT * FROM inventory').fetchall()
+        categories_list = conn.execute('SELECT * FROM categories').fetchall()
         
     total_products = len(inventory)
-    total_categories = len(set(item['category'] for item in inventory)) if inventory else 0
+    total_categories = len(categories_list)
     conn.close()
     
     return render_template('dashboard.html', total_products=total_products, total_categories=total_categories)
 
+# --- CATEGORIES MODULE ---
+@app.route('/categories')
+def categories():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM categories ORDER BY id DESC;")
+        categories_list = cur.fetchall()
+        cur.close()
+    else:
+        categories_list = conn.execute('SELECT * FROM categories ORDER BY id DESC').fetchall()
+    conn.close()
+    
+    return render_template('categories.html', categories=categories_list)
+
+@app.route('/categories/add', methods=['POST'])
+def add_category():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    name = request.form.get('name')
+    description = request.form.get('description', '')
+    
+    if name:
+        conn, db_type = get_db_connection()
+        if db_type == 'pg':
+            cur = conn.cursor()
+            cur.execute("INSERT INTO categories (name, description) VALUES (%s, %s) ON CONFLICT DO NOTHING;", (name, description))
+            conn.commit()
+            cur.close()
+        else:
+            conn.execute('INSERT OR IGNORE INTO categories (name, description) VALUES (?, ?)', (name, description))
+            conn.commit()
+        conn.close()
+        
+    return redirect(url_for('categories'))
+
+@app.route('/categories/delete/<int:id>', methods=['POST'])
+def delete_category(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        cur = conn.cursor()
+        cur.execute("DELETE FROM categories WHERE id = %s;", (id,))
+        conn.commit()
+        cur.close()
+    else:
+        conn.execute('DELETE FROM categories WHERE id = ?', (id,))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('categories'))
+
+# --- PRODUCTS MODULE ---
 @app.route('/products')
 def products():
     if not session.get('logged_in'):
@@ -137,24 +213,21 @@ def products():
         else:
             cur.execute("SELECT * FROM inventory ORDER BY id;")
         inventory = cur.fetchall()
+        
+        cur.execute("SELECT * FROM categories ORDER BY name;")
+        categories_list = cur.fetchall()
         cur.close()
     else:
         if search_query:
             inventory = conn.execute('SELECT * FROM inventory WHERE item LIKE ? OR category LIKE ?', (f'%{search_query}%', f'%{search_query}%')).fetchall()
         else:
             inventory = conn.execute('SELECT * FROM inventory').fetchall()
+        categories_list = conn.execute('SELECT * FROM categories ORDER BY name').fetchall()
             
     low_stock_items = [item for item in inventory if item['quantity'] <= 5]
     conn.close()
     
-    return render_template('products.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
-
-# Generic Section Route for Customer, Category, Supplier, Purchase, Orders, User Registration
-@app.route('/section/<title>')
-def view_section(title):
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-    return render_template('section.html', title=title)
+    return render_template('products.html', inventory=inventory, categories=categories_list, low_stock_items=low_stock_items, search_query=search_query)
 
 @app.route('/add', methods=['POST'])
 def add_item():
@@ -230,6 +303,12 @@ def delete_item(id):
         conn.commit()
     conn.close()
     return redirect(url_for('products'))
+
+@app.route('/section/<title>')
+def view_section(title):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+    return render_template('section.html', title=title)
 
 @app.route('/export/csv')
 def export_csv():
