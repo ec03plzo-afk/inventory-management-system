@@ -43,6 +43,8 @@ def init_db():
                 product_name VARCHAR(255) NOT NULL,
                 customer_name VARCHAR(255) DEFAULT 'Walk-in',
                 quantity INTEGER NOT NULL,
+                unit_price NUMERIC(10,2) DEFAULT 0.00,
+                total_price NUMERIC(10,2) DEFAULT 0.00,
                 order_date VARCHAR(100) NOT NULL
             );
         ''')
@@ -77,6 +79,7 @@ def init_db():
                 id SERIAL PRIMARY KEY,
                 item VARCHAR(255) NOT NULL,
                 quantity INTEGER NOT NULL,
+                price NUMERIC(10,2) DEFAULT 0.00,
                 category VARCHAR(255) DEFAULT 'General'
             );
         ''')
@@ -111,6 +114,8 @@ def init_db():
                 product_name TEXT NOT NULL,
                 customer_name TEXT DEFAULT 'Walk-in',
                 quantity INTEGER NOT NULL,
+                unit_price REAL DEFAULT 0.00,
+                total_price REAL DEFAULT 0.00,
                 order_date TEXT NOT NULL
             )
         ''')
@@ -145,6 +150,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 item TEXT NOT NULL,
                 quantity INTEGER NOT NULL,
+                price REAL DEFAULT 0.00,
                 category TEXT DEFAULT 'General'
             )
         ''')
@@ -213,6 +219,8 @@ def dashboard():
         total_suppliers = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM orders;")
         total_orders = cur.fetchone()[0]
+        cur.execute("SELECT COALESCE(SUM(total_price), 0) FROM orders;")
+        total_revenue = float(cur.fetchone()[0])
         cur.execute("SELECT COUNT(*) FROM purchases;")
         total_purchases = cur.fetchone()[0]
         cur.execute("SELECT COUNT(*) FROM users;")
@@ -224,6 +232,8 @@ def dashboard():
         total_customers = conn.execute("SELECT COUNT(*) FROM customers;").fetchone()[0]
         total_suppliers = conn.execute("SELECT COUNT(*) FROM suppliers;").fetchone()[0]
         total_orders = conn.execute("SELECT COUNT(*) FROM orders;").fetchone()[0]
+        revenue_val = conn.execute("SELECT SUM(total_price) FROM orders;").fetchone()[0]
+        total_revenue = float(revenue_val) if revenue_val else 0.0
         total_purchases = conn.execute("SELECT COUNT(*) FROM purchases;").fetchone()[0]
         total_users = conn.execute("SELECT COUNT(*) FROM users;").fetchone()[0]
         
@@ -236,6 +246,7 @@ def dashboard():
         total_customers=total_customers,
         total_suppliers=total_suppliers,
         total_orders=total_orders,
+        total_revenue=total_revenue,
         total_purchases=total_purchases,
         total_users=total_users
     )
@@ -432,8 +443,10 @@ def add_order():
                 new_qty = prod['quantity'] - qty
                 cur.execute("UPDATE inventory SET quantity = %s WHERE id = %s;", (new_qty, product_id))
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                cur.execute("INSERT INTO orders (product_id, product_name, customer_name, quantity, order_date) VALUES (%s, %s, %s, %s, %s);",
-                            (product_id, prod['item'], customer_name, qty, now_str))
+                unit_p = float(prod['price']) if prod['price'] else 0.0
+                tot_p = unit_p * qty
+                cur.execute("INSERT INTO orders (product_id, product_name, customer_name, quantity, unit_price, total_price, order_date) VALUES (%s, %s, %s, %s, %s, %s, %s);",
+                            (product_id, prod['item'], customer_name, qty, unit_p, tot_p, now_str))
                 conn.commit()
             else:
                 flash("Not enough stock available!")
@@ -444,8 +457,10 @@ def add_order():
                 new_qty = prod['quantity'] - qty
                 conn.execute('UPDATE inventory SET quantity = ? WHERE id = ?', (new_qty, product_id))
                 now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                conn.execute('INSERT INTO orders (product_id, product_name, customer_name, quantity, order_date) VALUES (?, ?, ?, ?, ?)',
-                             (product_id, prod['item'], customer_name, qty, now_str))
+                unit_p = float(prod['price']) if prod['price'] else 0.0
+                tot_p = unit_p * qty
+                conn.execute('INSERT INTO orders (product_id, product_name, customer_name, quantity, unit_price, total_price, order_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                             (product_id, prod['item'], customer_name, qty, unit_p, tot_p, now_str))
                 conn.commit()
             else:
                 flash("Not enough stock available!")
@@ -688,17 +703,18 @@ def add_item():
         
     item_name = request.form.get('item')
     qty = request.form.get('quantity')
+    price = request.form.get('price', 0.0)
     category = request.form.get('category', 'General')
     
     if item_name and qty:
         conn, db_type = get_db_connection()
         if db_type == 'pg':
             cur = conn.cursor()
-            cur.execute("INSERT INTO inventory (item, quantity, category) VALUES (%s, %s, %s);", (item_name, int(qty), category))
+            cur.execute("INSERT INTO inventory (item, quantity, price, category) VALUES (%s, %s, %s, %s);", (item_name, int(qty), float(price), category))
             conn.commit()
             cur.close()
         else:
-            conn.execute('INSERT INTO inventory (item, quantity, category) VALUES (?, ?, ?)', (item_name, int(qty), category))
+            conn.execute('INSERT INTO inventory (item, quantity, price, category) VALUES (?, ?, ?, ?)', (item_name, int(qty), float(price), category))
             conn.commit()
         conn.close()
         
@@ -714,15 +730,16 @@ def edit_item(id):
     if request.method == 'POST':
         item_name = request.form.get('item')
         qty = request.form.get('quantity')
+        price = request.form.get('price', 0.0)
         category = request.form.get('category', 'General')
         
         if db_type == 'pg':
             cur = conn.cursor()
-            cur.execute("UPDATE inventory SET item = %s, quantity = %s, category = %s WHERE id = %s;", (item_name, int(qty), category, id))
+            cur.execute("UPDATE inventory SET item = %s, quantity = %s, price = %s, category = %s WHERE id = %s;", (item_name, int(qty), float(price), category, id))
             conn.commit()
             cur.close()
         else:
-            conn.execute('UPDATE inventory SET item = ?, quantity = ?, category = ? WHERE id = ?', (item_name, int(qty), category, id))
+            conn.execute('UPDATE inventory SET item = ?, quantity = ?, price = ?, category = ? WHERE id = ?', (item_name, int(qty), float(price), category, id))
             conn.commit()
         conn.close()
         return redirect(url_for('products'))
@@ -765,19 +782,19 @@ def export_csv():
     if db_type == 'pg':
         import psycopg2.extras
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute("SELECT id, item, category, quantity FROM inventory ORDER BY id;")
+        cur.execute("SELECT id, item, category, quantity, price FROM inventory ORDER BY id;")
         inventory = cur.fetchall()
         cur.close()
     else:
-        inventory = conn.execute('SELECT id, item, category, quantity FROM inventory').fetchall()
+        inventory = conn.execute('SELECT id, item, category, quantity, price FROM inventory').fetchall()
     conn.close()
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Item Name', 'Category', 'Quantity'])
+    writer.writerow(['ID', 'Item Name', 'Category', 'Quantity', 'Price'])
     
     for row in inventory:
-        writer.writerow([row['id'], row['item'], row['category'], row['quantity']])
+        writer.writerow([row['id'], row['item'], row['category'], row['quantity'], row['price']])
         
     output.seek(0)
     return Response(
