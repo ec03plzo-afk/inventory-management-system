@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        form { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Inventory System</h1>
+    
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Item Name</th>
+            <th>Quantity</th>
+        </tr>
+        {% for row in inventory %}
+        <tr>
+            <td>{{ row.id }}</td>
+            <td>{{ row.item }}</td>
+            <td>{{ row.quantity }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Add New Item</h2>
+    <form action="/add" method="POST">
+        <input type="text" name="item" placeholder="Item Name" required>
+        <input type="number" name="quantity" placeholder="Quantity" required>
+        <button type="submit">Add Item</button>
+    </form>
+</body>
+</html>
