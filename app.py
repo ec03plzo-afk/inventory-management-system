@@ -3,6 +3,7 @@ import sqlite3
 import os
 import csv
 import io
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'supersecretkey')
@@ -25,6 +26,16 @@ def init_db():
     conn, db_type = get_db_connection()
     if db_type == 'pg':
         cur = conn.cursor()
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS orders (
+                id SERIAL PRIMARY KEY,
+                product_id INTEGER,
+                product_name VARCHAR(255) NOT NULL,
+                customer_name VARCHAR(255) DEFAULT 'Walk-in',
+                quantity INTEGER NOT NULL,
+                order_date VARCHAR(100) NOT NULL
+            );
+        ''')
         cur.execute('''
             CREATE TABLE IF NOT EXISTS suppliers (
                 id SERIAL PRIMARY KEY,
@@ -72,6 +83,16 @@ def init_db():
         conn.commit()
         cur.close()
     else:
+        conn.execute('''
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER,
+                product_name TEXT NOT NULL,
+                customer_name TEXT DEFAULT 'Walk-in',
+                quantity INTEGER NOT NULL,
+                order_date TEXT NOT NULL
+            )
+        ''')
         conn.execute('''
             CREATE TABLE IF NOT EXISTS suppliers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -169,17 +190,21 @@ def dashboard():
         customers_list = cur.fetchall()
         cur.execute("SELECT * FROM suppliers ORDER BY id;")
         suppliers_list = cur.fetchall()
+        cur.execute("SELECT * FROM orders ORDER BY id;")
+        orders_list = cur.fetchall()
         cur.close()
     else:
         inventory = conn.execute('SELECT * FROM inventory').fetchall()
         categories_list = conn.execute('SELECT * FROM categories').fetchall()
         customers_list = conn.execute('SELECT * FROM customers').fetchall()
         suppliers_list = conn.execute('SELECT * FROM suppliers').fetchall()
+        orders_list = conn.execute('SELECT * FROM orders').fetchall()
         
     total_products = len(inventory)
     total_categories = len(categories_list)
     total_customers = len(customers_list)
     total_suppliers = len(suppliers_list)
+    total_orders = len(orders_list)
     conn.close()
     
     return render_template(
@@ -187,8 +212,95 @@ def dashboard():
         total_products=total_products, 
         total_categories=total_categories,
         total_customers=total_customers,
-        total_suppliers=total_suppliers
+        total_suppliers=total_suppliers,
+        total_orders=total_orders
     )
+
+# --- ORDERS / POS MODULE ---
+@app.route('/orders')
+def orders():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM orders ORDER BY id DESC;")
+        orders_list = cur.fetchall()
+        cur.execute("SELECT * FROM inventory WHERE quantity > 0 ORDER BY item;")
+        products_list = cur.fetchall()
+        cur.execute("SELECT * FROM customers ORDER BY name;")
+        customers_list = cur.fetchall()
+        cur.close()
+    else:
+        orders_list = conn.execute('SELECT * FROM orders ORDER BY id DESC').fetchall()
+        products_list = conn.execute('SELECT * FROM inventory WHERE quantity > 0 ORDER BY item').fetchall()
+        customers_list = conn.execute('SELECT * FROM customers ORDER BY name').fetchall()
+    conn.close()
+    
+    return render_template('orders.html', orders=orders_list, products=products_list, customers=customers_list)
+
+@app.route('/orders/add', methods=['POST'])
+def add_order():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    product_id = request.form.get('product_id')
+    customer_name = request.form.get('customer_name', 'Walk-in')
+    qty_str = request.form.get('quantity')
+    
+    if product_id and qty_str:
+        qty = int(qty_str)
+        conn, db_type = get_db_connection()
+        
+        if db_type == 'pg':
+            import psycopg2.extras
+            cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            cur.execute("SELECT * FROM inventory WHERE id = %s;", (product_id,))
+            prod = cur.fetchone()
+            
+            if prod and prod['quantity'] >= qty:
+                new_qty = prod['quantity'] - qty
+                cur.execute("UPDATE inventory SET quantity = %s WHERE id = %s;", (new_qty, product_id))
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                cur.execute("INSERT INTO orders (product_id, product_name, customer_name, quantity, order_date) VALUES (%s, %s, %s, %s, %s);",
+                            (product_id, prod['item'], customer_name, qty, now_str))
+                conn.commit()
+            else:
+                flash("Not enough stock available!")
+            cur.close()
+        else:
+            prod = conn.execute('SELECT * FROM inventory WHERE id = ?', (product_id,)).fetchone()
+            if prod and prod['quantity'] >= qty:
+                new_qty = prod['quantity'] - qty
+                conn.execute('UPDATE inventory SET quantity = ? WHERE id = ?', (new_qty, product_id))
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                conn.execute('INSERT INTO orders (product_id, product_name, customer_name, quantity, order_date) VALUES (?, ?, ?, ?, ?)',
+                             (product_id, prod['item'], customer_name, qty, now_str))
+                conn.commit()
+            else:
+                flash("Not enough stock available!")
+        conn.close()
+        
+    return redirect(url_for('orders'))
+
+@app.route('/orders/delete/<int:id>', methods=['POST'])
+def delete_order(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        cur = conn.cursor()
+        cur.execute("DELETE FROM orders WHERE id = %s;", (id,))
+        conn.commit()
+        cur.close()
+    else:
+        conn.execute('DELETE FROM orders WHERE id = ?', (id,))
+        conn.commit()
+    conn.close()
+    return redirect(url_for('orders'))
 
 # --- SUPPLIER MODULE ---
 @app.route('/suppliers')
