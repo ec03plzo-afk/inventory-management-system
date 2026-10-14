@@ -83,6 +83,26 @@ def add_item():
         
     return redirect(url_for('index'))
 
+@app.route('/edit/<int:id>', methods=['GET', 'POST'])
+def edit_item(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    
+    if request.method == 'POST':
+        item_name = request.form.get('item')
+        qty = request.form.get('quantity')
+        
+        conn.execute('UPDATE inventory SET item = ?, quantity = ? WHERE id = ?', (item_name, int(qty), id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('index'))
+        
+    item = conn.execute('SELECT * FROM inventory WHERE id = ?', (id,)).fetchone()
+    conn.close()
+    return render_template('edit.html', item=item)
+
 @app.route('/delete/<int:id>', methods=['POST'])
 def delete_item(id):
     if not session.get('logged_in'):
