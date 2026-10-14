@@ -1,23 +1,98 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+import sqlite3
 
 app = Flask(__name__)
+app.secret_key = 'supersecretkey'
 
-inventory = [
-    {"id": 1, "item": "Laptop", "quantity": 10},
-    {"id": 2, "item": "Mouse", "quantity": 25}
-]
+def get_db_connection():
+    conn = sqlite3.connect('inventory.db')
+    conn.row_factory = sqlite3.Row
+    return conn
 
-@app.route("/")
+def init_db():
+    conn = get_db_connection()
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS inventory (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            item TEXT NOT NULL,
+            quantity INTEGER NOT NULL
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    ''')
+    user = conn.execute('SELECT * FROM users WHERE username = ?', ('admin',)).fetchone()
+    if not user:
+        conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', ('admin', 'password123'))
+    conn.commit()
+    conn.close()
+
+init_db()
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password)).fetchone()
+        conn.close()
+        
+        if user:
+            session['logged_in'] = True
+            session['username'] = username
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid Username or Password!')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
+@app.route('/')
 def index():
-    return render_template("index.html", inventory=inventory)
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    inventory = conn.execute('SELECT * FROM inventory').fetchall()
+    conn.close()
+    return render_template('index.html', inventory=inventory)
 
-@app.route("/add", methods=["POST"])
+@app.route('/add', methods=['POST'])
 def add_item():
-    item_name = request.form.get("item")
-    qty = request.form.get("quantity")
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    item_name = request.form.get('item')
+    qty = request.form.get('quantity')
+    
     if item_name and qty:
-        inventory.append({"id": len(inventory) + 1, "item": item_name, "quantity": int(qty)})
-    return redirect(url_for("index"))
+        conn = get_db_connection()
+        conn.execute('INSERT INTO inventory (item, quantity) VALUES (?, ?)', (item_name, int(qty)))
+        conn.commit()
+        conn.close()
+        
+    return redirect(url_for('index'))
 
-if __name__ == "__main__":
+@app.route('/delete/<int:id>', methods=['POST'])
+def delete_item(id):
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn = get_db_connection()
+    conn.execute('DELETE FROM inventory WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('index'))
+
+if __name__ == '__main__':
     app.run(debug=True)
