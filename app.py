@@ -91,6 +91,12 @@ def init_db():
                 role VARCHAR(50) DEFAULT 'Staff'
             );
         ''')
+        
+        # Safely add missing columns to existing tables if they don't exist yet
+        cur.execute("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS price NUMERIC(10,2) DEFAULT 0.00;")
+        cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS unit_price NUMERIC(10,2) DEFAULT 0.00;")
+        cur.execute("ALTER TABLE orders ADD COLUMN IF NOT EXISTS total_price NUMERIC(10,2) DEFAULT 0.00;")
+
         cur.execute("SELECT * FROM users WHERE username = %s;", ('admin@gmail.com',))
         if not cur.fetchone():
             cur.execute("INSERT INTO users (username, password, role) VALUES (%s, %s, %s);", ('admin@gmail.com', 'password123', 'Admin'))
@@ -162,6 +168,20 @@ def init_db():
                 role TEXT DEFAULT 'Staff'
             )
         ''')
+        
+        try:
+            conn.execute("ALTER TABLE inventory ADD COLUMN price REAL DEFAULT 0.00;")
+        except:
+            pass
+        try:
+            conn.execute("ALTER TABLE orders ADD COLUMN unit_price REAL DEFAULT 0.00;")
+        except:
+            pass
+        try:
+            conn.execute("ALTER TABLE orders ADD COLUMN total_price REAL DEFAULT 0.00;")
+        except:
+            pass
+
         user = conn.execute('SELECT * FROM users WHERE username = ?', ('admin@gmail.com',)).fetchone()
         if not user:
             conn.execute('INSERT INTO users (username, password, role) VALUES (?, ?, ?)', ('admin@gmail.com', 'password123', 'Admin'))
