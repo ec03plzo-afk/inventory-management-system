@@ -40,9 +40,9 @@ def init_db():
                 password VARCHAR(255) NOT NULL
             );
         ''')
-        cur.execute("SELECT * FROM users WHERE username = %s;", ('admin',))
+        cur.execute("SELECT * FROM users WHERE username = %s;", ('admin@gmail.com',))
         if not cur.fetchone():
-            cur.execute("INSERT INTO users (username, password) VALUES (%s, %s);", ('admin', 'password123'))
+            cur.execute("INSERT INTO users (username, password) VALUES (%s, %s);", ('admin@gmail.com', 'password123'))
         conn.commit()
         cur.close()
     else:
@@ -61,9 +61,9 @@ def init_db():
                 password TEXT NOT NULL
             )
         ''')
-        user = conn.execute('SELECT * FROM users WHERE username = ?', ('admin',)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', ('admin@gmail.com',)).fetchone()
         if not user:
-            conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', ('admin', 'password123'))
+            conn.execute('INSERT INTO users (username, password) VALUES (?, ?)', ('admin@gmail.com', 'password123'))
         conn.commit()
     conn.close()
 
@@ -88,7 +88,7 @@ def login():
         if user:
             session['logged_in'] = True
             session['username'] = username
-            return redirect(url_for('index'))
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid Username or Password!')
             
@@ -99,9 +99,31 @@ def logout():
     session.clear()
     return redirect(url_for('login'))
 
-# Tab 1: Inventory List Page
 @app.route('/')
-def index():
+@app.route('/dashboard')
+def dashboard():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
+        
+    conn, db_type = get_db_connection()
+    if db_type == 'pg':
+        import psycopg2.extras
+        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        cur.execute("SELECT * FROM inventory ORDER BY id;")
+        inventory = cur.fetchall()
+        cur.close()
+    else:
+        inventory = conn.execute('SELECT * FROM inventory').fetchall()
+        
+    total_products = len(inventory)
+    total_categories = len(set(item['category'] for item in inventory)) if inventory else 0
+    
+    conn.close()
+    
+    return render_template('dashboard.html', total_products=total_products, total_categories=total_categories)
+
+@app.route('/products')
+def products():
     if not session.get('logged_in'):
         return redirect(url_for('login'))
         
@@ -126,37 +148,7 @@ def index():
     low_stock_items = [item for item in inventory if item['quantity'] <= 5]
     conn.close()
     
-    return render_template('index.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
-
-# Tab 2: Dashboard Analytics Page
-@app.route('/dashboard')
-def dashboard():
-    if not session.get('logged_in'):
-        return redirect(url_for('login'))
-        
-    conn, db_type = get_db_connection()
-    
-    if db_type == 'pg':
-        import psycopg2.extras
-        cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-        cur.execute("SELECT * FROM inventory ORDER BY id;")
-        inventory = cur.fetchall()
-        cur.close()
-    else:
-        inventory = conn.execute('SELECT * FROM inventory').fetchall()
-        
-    total_items = len(inventory)
-    total_quantity = sum(item['quantity'] for item in inventory)
-    low_stock_items = [item for item in inventory if item['quantity'] <= 5]
-    
-    conn.close()
-    
-    return render_template(
-        'dashboard.html', 
-        total_items=total_items, 
-        total_quantity=total_quantity, 
-        low_stock_items=low_stock_items
-    )
+    return render_template('products.html', inventory=inventory, low_stock_items=low_stock_items, search_query=search_query)
 
 @app.route('/add', methods=['POST'])
 def add_item():
@@ -179,7 +171,7 @@ def add_item():
             conn.commit()
         conn.close()
         
-    return redirect(url_for('index'))
+    return redirect(url_for('products'))
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 def edit_item(id):
@@ -202,7 +194,7 @@ def edit_item(id):
             conn.execute('UPDATE inventory SET item = ?, quantity = ?, category = ? WHERE id = ?', (item_name, int(qty), category, id))
             conn.commit()
         conn.close()
-        return redirect(url_for('index'))
+        return redirect(url_for('products'))
         
     if db_type == 'pg':
         import psycopg2.extras
@@ -231,7 +223,7 @@ def delete_item(id):
         conn.execute('DELETE FROM inventory WHERE id = ?', (id,))
         conn.commit()
     conn.close()
-    return redirect(url_for('index'))
+    return redirect(url_for('products'))
 
 @app.route('/export/csv')
 def export_csv():
