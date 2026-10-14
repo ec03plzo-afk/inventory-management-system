@@ -45,7 +45,7 @@
             <li><a href="/dashboard" class="active"><i class="fa-solid fa-th-large"></i> Dashboard</a></li>
             <li><a href="/products"><i class="fa-solid fa-box"></i> Product</a></li>
             <li><a href="/customers"><i class="fa-solid fa-users"></i> Customer</a></li>
-            <li><a href="/section/Category"><i class="fa-solid fa-layer-group"></i> Category</a></li>
+            <li><a href="/categories"><i class="fa-solid fa-layer-group"></i> Category</a></li>
             <li><a href="/suppliers"><i class="fa-solid fa-truck"></i> Supplier</a></li>
             <li><a href="/purchases"><i class="fa-solid fa-shopping-bag"></i> Purchase</a></li>
             <li><a href="/orders"><i class="fa-solid fa-receipt"></i> Orders</a></li>
@@ -71,7 +71,7 @@
                 <a href="/customers" class="card-item card-red">
                     <div class="card-info">
                         <h4>Customers</h4>
-                        <p>1</p>
+                        <p>{{ total_customers }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-user" style="color: #dc3545;"></i></div>
                 </a>
@@ -87,7 +87,7 @@
                 <a href="/purchases" class="card-item card-yellow">
                     <div class="card-info">
                         <h4>Purchase</h4>
-                        <p>1</p>
+                        <p>{{ total_purchases }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-bag-shopping" style="color: #ffc107;"></i></div>
                 </a>
@@ -95,12 +95,12 @@
                 <a href="/orders" class="card-item card-green">
                     <div class="card-info">
                         <h4>Orders</h4>
-                        <p>2</p>
+                        <p>{{ total_orders }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-newspaper" style="color: #28a745;"></i></div>
                 </a>
 
-                <a href="/section/Category" class="card-item card-green">
+                <a href="/categories" class="card-item card-green">
                     <div class="card-info">
                         <h4>Category</h4>
                         <p>{{ total_categories }}</p>
@@ -111,7 +111,7 @@
                 <a href="/suppliers" class="card-item card-yellow">
                     <div class="card-info">
                         <h4>Suppliers</h4>
-                        <p>1</p>
+                        <p>{{ total_suppliers }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-solid fa-truck" style="color: #ffc107;"></i></div>
                 </a>
@@ -119,7 +119,7 @@
                 <a href="/users" class="card-item card-blue">
                     <div class="card-info">
                         <h4>User Registration</h4>
-                        <p>1</p>
+                        <p>{{ total_users }}</p>
                     </div>
                     <div class="card-icon"><i class="fa-regular fa-address-card" style="color: #17a2b8;"></i></div>
                 </a>
